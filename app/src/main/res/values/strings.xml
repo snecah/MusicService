@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">MusicService</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="now_playing">Now playing</string>
+    <string name="author_name">Author</string>
+    <string name="first_track">Это первый трэк в очереди</string>
+    <string name="last_track">Это последний трэк в очереди</string>
+    <string name="phonk">Phonk %d</string>
+    <string name="phonk_0">Phonk 0</string>
+</resources>
