@@ -54,4 +54,7 @@ dependencies {
 
     // viewBinding delegate
     implementation("com.github.kirich1409:viewbindingpropertydelegate-full:1.5.9")
+
+    //Media
+    implementation("androidx.media:media:1.6.0")
 }

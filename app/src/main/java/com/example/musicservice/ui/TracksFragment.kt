@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.AssetFileDescriptor
+import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.view.View
@@ -13,6 +14,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import by.kirich1409.viewbindingdelegate.viewBinding
+import com.example.musicservice.ActionPlaying
 import com.example.musicservice.MusicService
 import com.example.musicservice.R
 import com.example.musicservice.databinding.FragmentTracksBinding
@@ -22,7 +24,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
-class TracksFragment : Fragment(R.layout.fragment_tracks) {
+class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
 
     private val binding by viewBinding(FragmentTracksBinding::bind)
 
@@ -35,6 +37,9 @@ class TracksFragment : Fragment(R.layout.fragment_tracks) {
             val binder = service as MusicService.MusicBinder
             musicService = binder.getService()
             isServiceBound = true
+
+            musicService.setCallBack(this@TracksFragment)
+
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -47,48 +52,23 @@ class TracksFragment : Fragment(R.layout.fragment_tracks) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-
-
-        Intent(requireContext(), MusicService::class.java).also { intent ->
-            requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        }
-
+        val intent = Intent(requireContext(), MusicService::class.java)
+        requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE)
 
 
         binding.playImage.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                requireContext().startForegroundService(intent)
+            else requireContext().startService(intent)
+
             if (isServiceBound) {
-
-                musicService.getPlayer().setOnCompletionListener {
-                    binding.pauseImage.visibility = View.INVISIBLE
-                    binding.playImage.visibility = View.VISIBLE
-                }
-
-                if (!musicService.getState()) {
-                    setTrack(resources.openRawResourceFd(tracks[0]))
-                    initializeSeekBar()
-                }
-                musicService.playTrack()
-                binding.pauseImage.visibility = View.VISIBLE
-                binding.playImage.visibility = View.INVISIBLE
-
-                lifecycleScope.launch(Dispatchers.Main) {
-                    while (musicService.isPlaying()) {
-                        val currentTimeMilli = musicService.getCurrentPosition().milliseconds
-                        binding.seekBar.progress = musicService.getCurrentPosition()
-                        binding.currentTime.text =
-                            currentTimeMilli.inWholeSeconds.secondsToMinutesSeconds()
-                        delay(1000)
-                    }
-                }
-
+                onPlayPauseButtonClicked()
             }
         }
 
         binding.pauseImage.setOnClickListener {
             if (isServiceBound) {
-                binding.pauseImage.visibility = View.INVISIBLE
-                binding.playImage.visibility = View.VISIBLE
-                musicService.pauseTrack()
+                onPlayPauseButtonClicked()
             }
         }
 
@@ -108,40 +88,28 @@ class TracksFragment : Fragment(R.layout.fragment_tracks) {
 
         binding.nextTrack.setOnClickListener {
             if (isServiceBound) {
-                if (musicService.getTrackPosInList() == LAST_TRACK_POS)
-                    Toast.makeText(requireContext(), R.string.last_track, Toast.LENGTH_SHORT)
-                        .show()
-                else {
-                    musicService.incTrackPosInList()
-                    val currentTrackPosInList = musicService.getTrackPosInList()
-                    binding.trackTitle.text = getString(R.string.phonk, currentTrackPosInList)
-                    val currentTrack =
-                        resources.openRawResourceFd(tracks[currentTrackPosInList])
-                    musicService.setNewTrack(currentTrack)
-                    binding.pauseImage.visibility = View.VISIBLE
-                    binding.playImage.visibility = View.INVISIBLE
+                if (!musicService.getState()) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                        requireContext().startForegroundService(intent)
+                    else requireContext().startService(intent)
                 }
+                onNextButtonClicked()
             }
         }
 
         binding.previousTrack.setOnClickListener {
             if (isServiceBound) {
-                if (musicService.getTrackPosInList() == FIRST_TRACK_POS)
-                    Toast.makeText(requireContext(), R.string.first_track, Toast.LENGTH_SHORT)
-                        .show()
-                else {
-                    musicService.decTrackPosInList()
-                    val currentTrackPosInList = musicService.getTrackPosInList()
-                    binding.trackTitle.text = getString(R.string.phonk, currentTrackPosInList)
-                    val currentTrack =
-                        resources.openRawResourceFd(tracks[musicService.getTrackPosInList()])
-                    musicService.setNewTrack(currentTrack)
-                    binding.pauseImage.visibility = View.VISIBLE
-                    binding.playImage.visibility = View.INVISIBLE
-                }
+                onPrevButtonClicked()
             }
-
         }
+    }
+
+    override fun onStop() {
+        if (isServiceBound) {
+            requireContext().unbindService(connection)
+            isServiceBound = false
+        }
+        super.onStop()
     }
 
     private fun initializeSeekBar() {
@@ -159,6 +127,83 @@ class TracksFragment : Fragment(R.layout.fragment_tracks) {
     companion object {
         private const val LAST_TRACK_POS = 3
         private const val FIRST_TRACK_POS = 0
+    }
+
+    private fun onPlayButtonClicked() {
+        musicService.getPlayer().setOnCompletionListener {
+            binding.pauseImage.visibility = View.INVISIBLE
+            binding.playImage.visibility = View.VISIBLE
+        }
+
+        if (!musicService.getState()) {
+            setTrack(resources.openRawResourceFd(tracks[0]))
+            initializeSeekBar()
+        }
+        musicService.playTrack()
+        binding.pauseImage.visibility = View.VISIBLE
+        binding.playImage.visibility = View.INVISIBLE
+
+        lifecycleScope.launch(Dispatchers.Main) {
+            while (musicService.isPlaying()) {
+                val currentTimeMilli = musicService.getCurrentPosition().milliseconds
+                binding.seekBar.progress = musicService.getCurrentPosition()
+                binding.currentTime.text =
+                    currentTimeMilli.inWholeSeconds.secondsToMinutesSeconds()
+                delay(1000)
+            }
+        }
+        musicService.showNotification()
+    }
+
+    override fun onPlayPauseButtonClicked() {
+        if (musicService.isPlaying())
+            onPauseButtonClicked()
+        else
+            onPlayButtonClicked()
+    }
+
+    private fun onPauseButtonClicked() {
+        binding.pauseImage.visibility = View.INVISIBLE
+        binding.playImage.visibility = View.VISIBLE
+        musicService.pauseTrack()
+        musicService.showNotification()
+    }
+
+    override fun onNextButtonClicked() {
+        initializeSeekBar()
+
+        if (musicService.getTrackPosInList() == LAST_TRACK_POS)
+            Toast.makeText(requireContext(), R.string.last_track, Toast.LENGTH_SHORT)
+                .show()
+        else {
+            musicService.incTrackPosInList()
+            val currentTrackPosInList = musicService.getTrackPosInList()
+            binding.trackTitle.text = getString(R.string.phonk, currentTrackPosInList)
+            val currentTrack =
+                resources.openRawResourceFd(tracks[currentTrackPosInList])
+            musicService.setNewTrack(currentTrack)
+            binding.pauseImage.visibility = View.VISIBLE
+            binding.playImage.visibility = View.INVISIBLE
+            musicService.showNotification()
+        }
+    }
+
+    override fun onPrevButtonClicked() {
+        initializeSeekBar()
+        if (musicService.getTrackPosInList() == FIRST_TRACK_POS)
+            Toast.makeText(requireContext(), R.string.first_track, Toast.LENGTH_SHORT)
+                .show()
+        else {
+            musicService.decTrackPosInList()
+            val currentTrackPosInList = musicService.getTrackPosInList()
+            binding.trackTitle.text = getString(R.string.phonk, currentTrackPosInList)
+            val currentTrack =
+                resources.openRawResourceFd(tracks[musicService.getTrackPosInList()])
+            musicService.setNewTrack(currentTrack)
+            binding.pauseImage.visibility = View.VISIBLE
+            binding.playImage.visibility = View.INVISIBLE
+            musicService.showNotification()
+        }
     }
 
 }
