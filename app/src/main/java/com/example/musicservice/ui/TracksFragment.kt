@@ -8,7 +8,9 @@ import android.content.res.AssetFileDescriptor
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -40,6 +42,19 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
 
             musicService.setCallBack(this@TracksFragment)
 
+            binding.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        musicService.seekTo(progress)
+                    }
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+
+            })
+
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -48,12 +63,22 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
 
     }
 
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+
+        val intent = Intent(requireContext(), MusicService::class.java)
+        requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE)
+
+        return super.onCreateView(inflater, container, savedInstanceState)
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val intent = Intent(requireContext(), MusicService::class.java)
-        requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE)
 
 
         binding.playImage.setOnClickListener {
@@ -72,20 +97,6 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
             }
         }
 
-
-        binding.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (fromUser) {
-                    musicService.seekTo(progress)
-                }
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-
-        })
-
         binding.nextTrack.setOnClickListener {
             if (isServiceBound) {
                 if (!musicService.getState()) {
@@ -101,6 +112,17 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
             if (isServiceBound) {
                 onPrevButtonClicked()
             }
+        }
+
+        if(savedInstanceState != null) {
+
+            restoreSeekBar()
+        }
+    }
+
+    private fun restoreSeekBar() {
+        with(binding) {
+            seekBar.progress = musicService.getCurrentPosition()
         }
     }
 
@@ -142,7 +164,14 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
         musicService.playTrack()
         binding.pauseImage.visibility = View.VISIBLE
         binding.playImage.visibility = View.INVISIBLE
+        musicService.showNotification()
+    }
 
+    override fun onPlayPauseButtonClicked() {
+        if (musicService.isPlaying())
+            onPauseButtonClicked()
+        else
+            onPlayButtonClicked()
         lifecycleScope.launch(Dispatchers.Main) {
             while (musicService.isPlaying()) {
                 val currentTimeMilli = musicService.getCurrentPosition().milliseconds
@@ -152,14 +181,6 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
                 delay(1000)
             }
         }
-        musicService.showNotification()
-    }
-
-    override fun onPlayPauseButtonClicked() {
-        if (musicService.isPlaying())
-            onPauseButtonClicked()
-        else
-            onPlayButtonClicked()
     }
 
     private fun onPauseButtonClicked() {
@@ -205,5 +226,4 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
             musicService.showNotification()
         }
     }
-
 }

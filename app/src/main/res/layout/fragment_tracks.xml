@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.TracksFragment">
+    tools:context=".ui.TracksFragment"
+    android:id="@+id/tracks_fragment">
 
     <TextView
         android:id="@+id/now_playing"

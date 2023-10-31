@@ -90,16 +90,16 @@ class MusicService : Service() {
     private fun createNotification(): Notification {
         val prevIntent = Intent(this, NotificationReceiver::class.java).setAction(ACTION_PREV)
         val prevPendingIntent =
-            PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_MUTABLE)
 
         val playPauseIntent =
             Intent(this, NotificationReceiver::class.java).setAction(ACTION_PLAY_PAUSE)
         val playPausePendingIntent =
-            PendingIntent.getBroadcast(this, 0, playPauseIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            PendingIntent.getBroadcast(this, 0, playPauseIntent, PendingIntent.FLAG_MUTABLE)
 
         val nextIntent = Intent(this, NotificationReceiver::class.java).setAction(ACTION_NEXT)
         val nextPendingIntent =
-            PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+            PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_MUTABLE)
 
 
         val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
