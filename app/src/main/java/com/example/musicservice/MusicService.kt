@@ -12,6 +12,8 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Binder
 import android.os.Build
+import android.os.Build.VERSION
+import android.os.Build.VERSION_CODES
 import android.os.IBinder
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
@@ -89,98 +91,137 @@ class MusicService : Service() {
 
     private fun createNotification(): Notification {
         val prevIntent = Intent(this, NotificationReceiver::class.java).setAction(ACTION_PREV)
-        val prevPendingIntent =
-            PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_MUTABLE)
 
         val playPauseIntent =
             Intent(this, NotificationReceiver::class.java).setAction(ACTION_PLAY_PAUSE)
-        val playPausePendingIntent =
-            PendingIntent.getBroadcast(this, 0, playPauseIntent, PendingIntent.FLAG_MUTABLE)
 
         val nextIntent = Intent(this, NotificationReceiver::class.java).setAction(ACTION_NEXT)
-        val nextPendingIntent =
-            PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_MUTABLE)
 
+        if (Build.VERSION.SDK_INT >= VERSION_CODES.S) {
+            val prevPendingIntent =
+                PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_MUTABLE)
 
-        val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.baseline_music_note)
-            .setContentTitle(getString(R.string.phonk, trackPosInList))
-            .addAction(R.drawable.baseline_chevron_left_mini, "Previous", prevPendingIntent)
-            .setStyle(
-                androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView()
-            )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setOnlyAlertOnce(true)
+            val playPausePendingIntent =
+                PendingIntent.getBroadcast(this, 0, playPauseIntent, PendingIntent.FLAG_MUTABLE)
 
-        return if (mediaPlayer.isPlaying) {
-            notificationBuilder
-                .addAction(R.drawable.baseline_pause_mini, "Pause", playPausePendingIntent)
-                .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
-                .build()
+            val nextPendingIntent =
+                PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_MUTABLE)
+
+            val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.baseline_music_note)
+                .setContentTitle(getString(R.string.phonk, trackPosInList))
+                .addAction(R.drawable.baseline_chevron_left_mini, "Previous", prevPendingIntent)
+                .setStyle(
+                    androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView()
+                )
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOnlyAlertOnce(true)
+
+            return if (mediaPlayer.isPlaying)
+            {
+                notificationBuilder
+                    .addAction(R.drawable.baseline_pause_mini, "Pause", playPausePendingIntent)
+                    .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
+                    .build()
+            } else
+            {
+                notificationBuilder
+                    .addAction(R.drawable.baseline_play_arrow_mini, "Play", playPausePendingIntent)
+                    .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
+                    .build()
+            }
         } else {
-            notificationBuilder
-                .addAction(R.drawable.baseline_play_arrow_mini, "Play", playPausePendingIntent)
-                .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
-                .build()
-        }
+            val prevPendingIntent =
+                PendingIntent.getBroadcast(this, 0, prevIntent, PendingIntent.FLAG_MUTABLE)
+
+            val playPausePendingIntent =
+                PendingIntent.getBroadcast(this, 0, playPauseIntent, PendingIntent.FLAG_MUTABLE)
+
+            val nextPendingIntent =
+                PendingIntent.getBroadcast(this, 0, nextIntent, PendingIntent.FLAG_MUTABLE)
+
+            val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.baseline_music_note)
+                .setContentTitle(getString(R.string.phonk, trackPosInList))
+                .addAction(R.drawable.baseline_chevron_left_mini, "Previous", prevPendingIntent)
+                .setStyle(
+                    androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView()
+                )
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setOnlyAlertOnce(true)
+
+            return if (mediaPlayer.isPlaying)
+            {
+                notificationBuilder
+                    .addAction(R.drawable.baseline_pause_mini, "Pause", playPausePendingIntent)
+                    .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
+                    .build()
+            } else
+            {
+                notificationBuilder
+                    .addAction(R.drawable.baseline_play_arrow_mini, "Play", playPausePendingIntent)
+                    .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
+                    .build()
+            }
     }
+}
 
-    fun showNotification() {
-        val notificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+fun showNotification() {
+    val notificationManager =
+        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val notification = createNotification()
+    val notification = createNotification()
 
-        notificationManager.notify(MUSIC_ID, notification)
+    notificationManager.notify(MUSIC_ID, notification)
+}
+
+
+fun pauseTrack() {
+    mediaPlayer.pause()
+}
+
+fun setTrack(trackId: AssetFileDescriptor) {
+    with(mediaPlayer) {
+        setDataSource(trackId)
+        prepare()
     }
+    isActivated = true
+}
 
-
-    fun pauseTrack() {
-        mediaPlayer.pause()
-    }
-
-    fun setTrack(trackId: AssetFileDescriptor) {
-        with(mediaPlayer) {
-            setDataSource(trackId)
-            prepare()
-        }
-        isActivated = true
-    }
-
-    fun setNewTrack(currentTrack: AssetFileDescriptor) {
-        with(mediaPlayer) {
-            if (isPlaying) mediaPlayer.stop()
-            mediaPlayer.reset()
-            setTrack(currentTrack)
-            mediaPlayer.start()
-        }
-    }
-
-    fun playTrack() {
+fun setNewTrack(currentTrack: AssetFileDescriptor) {
+    with(mediaPlayer) {
+        if (isPlaying) mediaPlayer.stop()
+        mediaPlayer.reset()
+        setTrack(currentTrack)
         mediaPlayer.start()
     }
+}
 
-    fun getState() = isActivated
+fun playTrack() {
+    mediaPlayer.start()
+}
 
-    fun getDuration(): Int = mediaPlayer.duration
-    fun getDurationInMilli() = getDuration().milliseconds.inWholeSeconds
-    fun seekTo(progress: Int) {
-        mediaPlayer.seekTo(progress)
-    }
+fun getState() = isActivated
 
-    fun isPlaying(): Boolean = mediaPlayer.isPlaying
-    fun getCurrentPosition() = mediaPlayer.currentPosition
-    fun getPlayer() = mediaPlayer
+fun getDuration(): Int = mediaPlayer.duration
+fun getDurationInMilli() = getDuration().milliseconds.inWholeSeconds
+fun seekTo(progress: Int) {
+    mediaPlayer.seekTo(progress)
+}
 
-    fun incTrackPosInList() = trackPosInList++
-    fun decTrackPosInList() = trackPosInList--
-    fun getTrackPosInList() = trackPosInList
+fun isPlaying(): Boolean = mediaPlayer.isPlaying
+fun getCurrentPosition() = mediaPlayer.currentPosition
+fun getPlayer() = mediaPlayer
 
-    companion object {
-        const val MUSIC_ID = 1
-        private const val ACTION_PREV = "PREVIOUS"
-        private const val ACTION_PLAY_PAUSE = "PLAY_PAUSE"
-        private const val ACTION_NEXT = "NEXT"
-        private const val CHANNEL_ID = "channel_id"
-    }
+fun incTrackPosInList() = trackPosInList++
+fun decTrackPosInList() = trackPosInList--
+fun getTrackPosInList() = trackPosInList
+
+companion object {
+    const val MUSIC_ID = 1
+    private const val ACTION_PREV = "PREVIOUS"
+    private const val ACTION_PLAY_PAUSE = "PLAY_PAUSE"
+    private const val ACTION_NEXT = "NEXT"
+    private const val CHANNEL_ID = "channel_id"
+}
 }

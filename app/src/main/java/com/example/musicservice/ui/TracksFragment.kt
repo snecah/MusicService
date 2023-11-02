@@ -43,7 +43,11 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
             musicService.setCallBack(this@TracksFragment)
 
             binding.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                override fun onProgressChanged(
+                    seekBar: SeekBar?,
+                    progress: Int,
+                    fromUser: Boolean
+                ) {
                     if (fromUser) {
                         musicService.seekTo(progress)
                     }
@@ -63,16 +67,10 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
 
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-
+    override fun onStart() {
         val intent = Intent(requireContext(), MusicService::class.java)
         requireContext().bindService(intent, connection, Context.BIND_AUTO_CREATE)
-
-        return super.onCreateView(inflater, container, savedInstanceState)
+        super.onStart()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -112,17 +110,6 @@ class TracksFragment : Fragment(R.layout.fragment_tracks), ActionPlaying {
             if (isServiceBound) {
                 onPrevButtonClicked()
             }
-        }
-
-        if(savedInstanceState != null) {
-
-            restoreSeekBar()
-        }
-    }
-
-    private fun restoreSeekBar() {
-        with(binding) {
-            seekBar.progress = musicService.getCurrentPosition()
         }
     }
 
