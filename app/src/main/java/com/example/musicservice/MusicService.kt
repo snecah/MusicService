@@ -19,6 +19,12 @@ import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import kotlin.time.Duration.Companion.milliseconds
 
+private const val MUSIC_ID = 1
+private const val ACTION_PREV = "PREVIOUS"
+private const val ACTION_PLAY_PAUSE = "PLAY_PAUSE"
+private const val ACTION_NEXT = "NEXT"
+private const val CHANNEL_ID = "channel_id"
+
 class MusicService : Service() {
 
 
@@ -117,14 +123,12 @@ class MusicService : Service() {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setOnlyAlertOnce(true)
 
-            return if (mediaPlayer.isPlaying)
-            {
+            return if (mediaPlayer.isPlaying) {
                 notificationBuilder
                     .addAction(R.drawable.baseline_pause_mini, "Pause", playPausePendingIntent)
                     .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
                     .build()
-            } else
-            {
+            } else {
                 notificationBuilder
                     .addAction(R.drawable.baseline_play_arrow_mini, "Play", playPausePendingIntent)
                     .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
@@ -150,78 +154,68 @@ class MusicService : Service() {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setOnlyAlertOnce(true)
 
-            return if (mediaPlayer.isPlaying)
-            {
+            return if (mediaPlayer.isPlaying) {
                 notificationBuilder
                     .addAction(R.drawable.baseline_pause_mini, "Pause", playPausePendingIntent)
                     .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
                     .build()
-            } else
-            {
+            } else {
                 notificationBuilder
                     .addAction(R.drawable.baseline_play_arrow_mini, "Play", playPausePendingIntent)
                     .addAction(R.drawable.baseline_chevron_right_mini, "Next", nextPendingIntent)
                     .build()
             }
+        }
     }
-}
 
-fun showNotification() {
-    val notificationManager =
-        getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    fun showNotification() {
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-    val notification = createNotification()
+        val notification = createNotification()
 
-    notificationManager.notify(MUSIC_ID, notification)
-}
-
-
-fun pauseTrack() {
-    mediaPlayer.pause()
-}
-
-fun setTrack(trackId: AssetFileDescriptor) {
-    with(mediaPlayer) {
-        setDataSource(trackId)
-        prepare()
+        notificationManager.notify(MUSIC_ID, notification)
     }
-    isActivated = true
-}
 
-fun setNewTrack(currentTrack: AssetFileDescriptor) {
-    with(mediaPlayer) {
-        if (isPlaying) mediaPlayer.stop()
-        mediaPlayer.reset()
-        setTrack(currentTrack)
+
+    fun pauseTrack() {
+        mediaPlayer.pause()
+    }
+
+    fun setTrack(trackId: AssetFileDescriptor) {
+        with(mediaPlayer) {
+            setDataSource(trackId)
+            prepare()
+        }
+        isActivated = true
+    }
+
+    fun setNewTrack(currentTrack: AssetFileDescriptor) {
+        with(mediaPlayer) {
+            if (isPlaying) mediaPlayer.stop()
+            mediaPlayer.reset()
+            setTrack(currentTrack)
+            mediaPlayer.start()
+        }
+    }
+
+    fun playTrack() {
         mediaPlayer.start()
     }
-}
 
-fun playTrack() {
-    mediaPlayer.start()
-}
+    fun getState() = isActivated
 
-fun getState() = isActivated
+    fun getDuration(): Int = mediaPlayer.duration
+    fun getDurationInMilli() = getDuration().milliseconds.inWholeSeconds
+    fun seekTo(progress: Int) {
+        mediaPlayer.seekTo(progress)
+    }
 
-fun getDuration(): Int = mediaPlayer.duration
-fun getDurationInMilli() = getDuration().milliseconds.inWholeSeconds
-fun seekTo(progress: Int) {
-    mediaPlayer.seekTo(progress)
-}
+    fun isPlaying(): Boolean = mediaPlayer.isPlaying
+    fun getCurrentPosition() = mediaPlayer.currentPosition
+    fun getPlayer() = mediaPlayer
 
-fun isPlaying(): Boolean = mediaPlayer.isPlaying
-fun getCurrentPosition() = mediaPlayer.currentPosition
-fun getPlayer() = mediaPlayer
-
-fun incTrackPosInList() = trackPosInList++
-fun decTrackPosInList() = trackPosInList--
-fun getTrackPosInList() = trackPosInList
-
-companion object {
-    const val MUSIC_ID = 1
-    private const val ACTION_PREV = "PREVIOUS"
-    private const val ACTION_PLAY_PAUSE = "PLAY_PAUSE"
-    private const val ACTION_NEXT = "NEXT"
-    private const val CHANNEL_ID = "channel_id"
-}
+    fun incTrackPosInList() = trackPosInList++
+    fun decTrackPosInList() = trackPosInList--
+    fun getTrackPosInList() = trackPosInList
 }

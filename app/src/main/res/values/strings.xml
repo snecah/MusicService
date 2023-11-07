@@ -8,4 +8,5 @@
     <string name="last_track">Это последний трэк в очереди</string>
     <string name="phonk">Phonk %d</string>
     <string name="phonk_0">Phonk 0</string>
+    <string name="track_start_time">0:00</string>
 </resources>
